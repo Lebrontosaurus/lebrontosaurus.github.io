@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>Fact-Aided News</title>
+<style>
+  :root{
+    --bg:#0b0c10; --card:#11141a; --muted:#5e6a7d; --text:#e9eef7; --accent:#62d2ff; --ok:#48d597; --warn:#ffd166; --bad:#ff6b6b; --chip:#1b2230;
+    --shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#0a0d14, #0b0c10 60%);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:5;background:rgba(11,12,16,.8);backdrop-filter:blur(10px);border-bottom:1px solid #1e2430}
+  .container{max-width:1100px;margin:0 auto;padding:16px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  h1{font-size:1.4rem;margin:0 0 8px 0;letter-spacing:.2px}
+  select, input[type="search"]{background:#0f1420;border:1px solid #223046;color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+  select:focus, input[type="search"]:focus{border-color:var(--accent)}
+  .switch{display:inline-flex;gap:8px;align-items:center}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:var(--chip);border:1px solid #223046;color:#dfe7f5;padding:6px 10px;border-radius:999px;font-size:.85rem;cursor:pointer;user-select:none}
+  .chip.active{background:#162136;border-color:var(--accent);box-shadow:0 0 0 1px inset var(--accent)}
+  #feed{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;padding:16px}
+  .card{background:var(--card);border:1px solid #1e2430;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .thumb{aspect-ratio:16/9;background:#0d121b;display:block;width:100%;object-fit:cover}
+  .content{padding:14px 16px 6px 16px}
+  .meta{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 8px 0}
+  .meta .badge{background:#0f1522;border:1px solid #223046;border-radius:999px;padding:3px 8px;color:#c9d6ea;font-size:.75rem}
+  .title{font-weight:700;font-size:1.02rem;margin:6px 0 6px 0;line-height:1.25}
+  .desc{color:#c2ccdf;font-size:.92rem;margin:0 0 10px 0}
+  .actions{display:flex;gap:8px;align-items:center;margin:8px 0 12px 0}
+  .btn{appearance:none;border:1px solid #2a364a;background:#121b2b;color:var(--text);padding:8px 10px;border-radius:12px;font-size:.9rem;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
+  .fact{border-top:1px dashed #263249;padding:12px 16px;background:#0e141f}
+  .fact h4{margin:0 0 8px 0;font-size:.95rem}
+  .checks{display:grid;gap:6px}
+  .check{display:flex;align-items:flex-start;gap:8px;font-size:.9rem}
+  .dot{width:9px;height:9px;border-radius:50%;;margin-top:6px}
+  .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+  .score{margin-top:8px;font-size:.85rem;color:#cdd7ea}
+  .factlinks{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .link{font-size:.85rem;color:var(--accent);text-decoration:none;border-bottom:1px dashed var(--accent)}
+  footer{padding:28px 0;color:#97a6bf;text-align:center}
+  .empty{opacity:.8;text-align:center;padding:24px}
+  .loadtip{opacity:.6;text-align:center;padding:8px}
+  .hr{height:1px;background:#1e2430;margin:8px 0}
+
+  .title.big { font-size: 1.3rem; margin: 12px 16px; line-height: 1.4; }
+</style>
+</head>
+<body>
+<header>
+<div class="container">
+<h1>📰 Fact-Aided News <span style="color:#62d2ff;font-weight:500">· headlines + transparent checks</span></h1>
+<div class="row" style="margin-top:6px">
+<select id="category">
+<option value="TOP">Top</option>
+<option value="WORLD">World</option>
+<option value="NATION">U.S.</option>
+<option value="BUSINESS">Business</option>
+<option value="TECHNOLOGY">Technology</option>
+<option value="ENTERTAINMENT">Entertainment</option>
+<option value="SPORTS">Sports</option>
+<option value="SCIENCE">Science</option>
+<option value="HEALTH">Health</option>
+</select>
+<select id="region">
+<option value="US:en">United States (EN)</option>
+<option value="GB:en">United Kingdom (EN)</option>
+<option value="CA:en">Canada (EN)</option>
+<option value="AU:en">Australia (EN)</option>
+<option value="IN:en">India (EN)</option>
+</select>
+<select id="cred">
+<option value="any">Credibility: Any</option>
+<option value="high">Credibility: High only</option>
+<option value="mid">Credibility: Mid+</option>
+</select>
+<input id="search" placeholder="Search headlines…" type="search"/>
+<button class="btn" id="reload">Reload</button>
+</div>
+<div class="row" style="margin-top:10px">
+<div class="chips" id="quickFilters">
+<span class="chip" data-q="breaking">Breaking</span>
+<span class="chip" data-q="election">Election</span>
+<span class="chip" data-q="economy">Economy</span>
+<span class="chip" data-q="science">Science</span>
+<span class="chip" data-q="tech">Tech</span>
+<span class="chip" data-q="health">Health</span>
+<span class="chip" data-q="">Clear</span>
+</div>
+</div>
+</div>
+</header>
+<main class="container">
+<div id="feed"></div>
+<div class="loadtip" id="sentinel">Loading more…</div>
+<div class="empty" id="empty" style="display:none">No stories found. Try another filter.</div>
+</main>
+<footer>
+<div class="container">
+      Built for transparency. Checks are assistive signals, not verdicts. Consider reading multiple sources.
+      <div class="hr"></div>
+<small>Sources via Google News RSS · CORS via AllOrigins proxy · No cookies, no tracking.</small>
+</div>
+</footer>
+<script>
+/** ========= Config ========= **/
+const CORS_PROXY = 'https://api.allorigins.win/get?url=';
+const CRED_MAP = {
+  high: new Set([
+    'apnews.com','reuters.com','bbc.com','bbc.co.uk','npr.org','wsj.com','ft.com','nytimes.com',
+    'washingtonpost.com','economist.com','nature.com','sciencemag.org','theguardian.com','bloomberg.com'
+  ]),
+  mid: new Set([
+    'abcnews.go.com','cbsnews.com','nbcnews.com','usatoday.com','time.com','forbes.com','theverge.com',
+    'engadget.com','techcrunch.com','cnn.com','latimes.com','thehill.com','politico.com','cnet.com'
+  ]),
+};
+const CLICKBAIT_PHRASES = [
+  "won't believe","what happened next","shocking","jaw-dropping","goes viral","you need to see",
+  "one simple trick","this is why","can't stop","instantly","#1 way","blasts","destroys","slams"
+];
+
+/** ========= State ========= **/
+let ITEMS = [];
+let PAGE = 0;
+const PER_PAGE = 12;
+let observer;
+
+/** ========= Utilities ========= **/
+const html = (s, ...v) => s.map((ss,i)=>ss+(v[i]??'')).join('');
+const strip = s => (s||'').replace(/<\/?[^>]+(>|$)/g,'').replace(/&.+?;/g,' ').trim();
+const domainFromUrl = url => { try{ return new URL(url).hostname.replace(/^www\./,''); }catch{ return ''; } };
+const timeAgo = d => {
+  const diff = (Date.now() - d.getTime())/1000;
+  if (diff<60) return `${Math.floor(diff)}s ago`;
+  if (diff<3600) return `${Math.floor(diff/60)}m ago`;
+  if (diff<86400) return `${Math.floor(diff/3600)}h ago`;
+  return `${Math.floor(diff/86400)}d ago`;
+};
+const isFresh = pub => (Date.now() - pub.getTime()) < (72*3600*1000);
+const countCitations = text => {
+  const quotes = (text.match(/“|”|\"/g)||[]).length;
+  const cites  = (text.match(/\\b(said|according to|reported|via|source)\\b/gi)||[]).length;
+  return quotes + cites;
+};
+const hasClickbait = t => CLICKBAIT_PHRASES.some(p => t.toLowerCase().includes(p));
+
+function credibilityBucket(host){
+  if (CRED_MAP.high.has(host)) return 'high';
+  if (CRED_MAP.mid.has(host))  return 'mid';
+  return 'unknown';
+}
+
+/** ========= Fetch & Parse RSS ========= **/
+function topicPath(topic){
+  if (topic==='TOP') return 'headlines';
+  return `headlines/section/topic/${topic}`;
+}
+
+async function fetchRSS({topic='TOP', ceid='US:en', q=''}) {
+  const base = `https://news.google.com/rss/${topicPath(topic)}?hl=en-US&gl=${ceid.split(':')[0]}&ceid=${encodeURIComponent(ceid)}`;
+  const url  = q ? `${base}&q=${encodeURIComponent(q)}` : base;
+  const proxied = CORS_PROXY + encodeURIComponent(url);
+  const res = await fetch(proxied);
+  if (!res.ok) throw new Error('RSS fetch failed');
+  const payload = await res.json();
+  const xml = payload.contents;
+  const doc = new DOMParser().parseFromString(xml, "text/xml");
+  const items = [...doc.querySelectorAll('item')].map(el=>{
+    const title = el.querySelector('title')?.textContent ?? '';
+    const link  = el.querySelector('link')?.textContent ?? '';
+    const desc  = el.querySelector('description')?.textContent ?? '';
+    const pub   = new Date(el.querySelector('pubDate')?.textContent ?? Date.now());
+    let img = el.querySelector('media\\:content, content')?.getAttribute('url') || '';
+    if (!img){
+      const tmp = document.createElement('div'); tmp.innerHTML = desc;
+      const imgtag = tmp.querySelector('img'); if (imgtag) img = imgtag.src;
+    }
+    const host = domainFromUrl(link);
+    const cred = credibilityBucket(host);
+    const clicky = hasClickbait(title);
+    const cites = countCitations(desc);
+    return {title, link, desc: strip(desc), pub, img, host, cred, clicky, cites};
+  });
+  return items;
+}
+
+/** ========= Rendering ========= **/
+function renderPage(reset=false){
+  const feed = document.getElementById('feed');
+  const empty = document.getElementById('empty');
+  if (reset){ feed.innerHTML=''; PAGE=0; }
+
+  const start = PAGE*PER_PAGE, end = start+PER_PAGE;
+  const slice = ITEMS.slice(start, end);
+  if (reset && slice.length===0){ empty.style.display='block'; return; }
+  empty.style.display = slice.length? 'none':'block';
+
+  const frag = document.createDocumentFragment();
+  slice.forEach(item=>{
+    const card = document.createElement('article');
+    card.className='card';
+    card.innerHTML = html`
+      ${item.img ? `<img class="thumb" loading="lazy" data-src="${item.img}" alt="">` : `<div class="title big">${item.title}</div>`}
+      <div class="content">
+        <div class="meta">
+          <span class="badge">${item.host||'source'}</span>
+          <span class="badge">${timeAgo(item.pub)}</span>
+          <span class="badge">cred: ${item.cred}</span>
+        </div>
+        ${item.img ? `<div class="title">${item.title}</div>` : ``}
+        <p class="desc">${item.desc || ''}</p>
+        <div class="actions">
+          <a class="btn" href="${item.link}" target="_blank" rel="noopener">Read story</a>
+          <button class="btn fcBtn">Fact-check</button>
+        </div>
+      </div>
+      <div class="fact" style="display:none">
+        <h4>Fact-check panel</h4>
+        <div class="checks">
+          <div class="check">
+            <span class="dot ${item.cred==='high'?'ok':item.cred==='mid'?'warn':'bad'}"></span>
+            <div><strong>Source reputation:</strong> ${item.cred.toUpperCase()} (${item.host||'unknown'})</div>
+          </div>
+          <div class="check">
+            <span class="dot ${isFresh(item.pub)?'ok':'warn'}"></span>
+            <div><strong>Date freshness:</strong> ${item.pub.toLocaleString()}</div>
+          </div>
+          <div class="check">
+            <span class="dot ${item.cites>=2?'ok':item.cites===1?'warn':'bad'}"></span>
+            <div><strong>Quotation / citation cues:</strong> ${item.cites} indicator(s) in summary</div>
+          </div>
+          <div class="check">
+            <span class="dot ${item.clicky?'bad':'ok'}"></span>
+            <div><strong>Headline clickbait flags:</strong> ${item.clicky? 'Possible clickbait phrasing detected':'None detected'}</div>
+          </div>
+        </div>
+        <div class="score">
+          Estimated signal score:
+          <strong>${
+            (()=>{
+              let s=0; if(item.cred==='high') s+=45; else if(item.cred==='mid') s+=25; else s+=10;
+              if(isFresh(item.pub)) s+=25;
+              s+= Math.min(item.cites*10, 20);
+              if(item.clicky) s-=15;
+              return Math.max(0, Math.min(100, s));
+            })()
+          }/100</strong>
+        </div>
+        <div class="factlinks">
+          ${factLinks(item).map(a=>`<a class="link" href="${a.href}" target="_blank" rel="noopener">${a.label}</a>`).join('')}
+        </div>
+      </div>
+    `;
+    frag.appendChild(card);
+  });
+  feed.appendChild(frag);
+  lazyImages();
+  bindFactButtons();
+  PAGE++;
+}
+
+function factLinks(item){
+  const q = encodeURIComponent(item.title.replace(/[-–|•].*$/,'').trim());
+  return [
+    {label:'Search PolitiFact', href:`https://www.google.com/search?q=site:politifact.com+${q}`},
+    {label:'Search Snopes', href:`https://www.google.com/search?q=site:snopes.com+${q}`},
+    {label:'Google Fact Check', href:`https://toolbox.google.com/factcheck/explorer/search/${q}`},
+    {label:'News across sources', href:`https://news.google.com/search?q=${q}&hl=en-US&gl=US&ceid=US:en`}
+  ];
+}
+
+function lazyImages(){
+  const imgs = document.querySelectorAll('img[loading="lazy"][data-src]');
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if (e.isIntersecting){
+        const img = e.target; img.src = img.dataset.src; img.removeAttribute('data-src'); io.unobserve(img);
+      }
+    });
+  }, {rootMargin:'200px'});
+  imgs.forEach(img=>io.observe(img));
+}
+
+function bindFactButtons(){
+  document.querySelectorAll('.card .fcBtn').forEach(btn=>{
+    btn.onclick = () => {
+      const fact = btn.closest('.card').querySelector('.fact');
+      fact.style.display = (fact.style.display==='none' || !fact.style.display) ? 'block' : 'none';
+    };
+  });
+}
+
+/** ========= Filtering & Loading ========= **/
+function applyFilters(raw){
+  const credSel = document.getElementById('cred').value;
+  const q = (document.getElementById('search').value||'').trim().toLowerCase();
+  let out = raw;
+  if (credSel==='high') out = out.filter(x=>x.cred==='high');
+  if (credSel==='mid')  out = out.filter(x=>x.cred==='high' || x.cred==='mid');
+  if (q) out = out.filter(x=> (x.title+x.desc+x.host).toLowerCase().includes(q));
+  return out;
+}
+
+async function load(reset=true){
+  const topic = document.getElementById('category').value;
+  const ceid = document.getElementById('region').value;
+  const activeChip = document.querySelector('.chip.active');
+  const qchip = activeChip ? (activeChip.dataset.q||'') : '';
+  const raw = await fetchRSS({topic, ceid, q:qchip});
+  ITEMS = applyFilters(raw);
+  renderPage(true);
+}
+
+/** ========= Infinite Scroll ========= **/
+function setupInfinite(){
+  const target = document.getElementById('sentinel');
+  if (observer) observer.disconnect();
+  observer = new IntersectionObserver(entries=>{
+    for (const e of entries){
+      if (e.isIntersecting){
+        if (PAGE*PER_PAGE < ITEMS.length){
+          renderPage(false);
+        } else {
+          e.target.textContent = 'You’re all caught up.';
+        }
+      }
+    }
+  }, {rootMargin:'600px'});
+  observer.observe(target);
+}
+
+/** ========= Events ========= **/
+window.addEventListener('DOMContentLoaded', async ()=>{
+  setupInfinite();
+  document.getElementById('reload').onclick = ()=>load(true);
+  document.getElementById('search').addEventListener('input', debounce(()=>{ ITEMS = applyFilters(ITEMS); renderPage(true); }, 250));
+  document.getElementById('category').onchange = ()=>load(true);
+  document.getElementById('region').onchange = ()=>load(true);
+  document.getElementById('cred').onchange = ()=>{ ITEMS = applyFilters(ITEMS); renderPage(true); };
+  document.getElementById('quickFilters').addEventListener('click', e=>{
+    const chip = e.target.closest('.chip'); if (!chip) return;
+    document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));
+    if (chip.dataset.q){ chip.classList.add('active'); }
+    load(true);
+  });
+
+  try{
+    await load(true);
+  }catch(err){
+    document.getElementById('feed').innerHTML = `<div class="empty">Failed to load headlines. ${err.message}</div>`;
+    console.error(err);
+  }
+});
+
+function debounce(fn, ms){
+  let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args), ms); };
+}
+</script>
+</body>
+</html>
